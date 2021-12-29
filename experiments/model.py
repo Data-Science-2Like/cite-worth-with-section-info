@@ -237,7 +237,7 @@ class AutoTransformerForSentenceSequenceModeling(nn.Module):
        Implements a transformer which performs sequence classification on a sequence of sentences
     """
 
-    def __init__(self, transformer_model: AnyStr, num_labels: int = 2, sep_token_id: int = 2):
+    def __init__(self, transformer_model: AnyStr, num_labels: int = 2, sep_token_id: int = 2, is_section_info_extra: bool = False):
         super(AutoTransformerForSentenceSequenceModeling, self).__init__()
 
         config = AutoConfig.from_pretrained(transformer_model)
@@ -254,6 +254,7 @@ class AutoTransformerForSentenceSequenceModeling(nn.Module):
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.sep_token_id = sep_token_id
+        self.is_section_info_extra = is_section_info_extra
 
     def forward(
             self,
@@ -270,8 +271,14 @@ class AutoTransformerForSentenceSequenceModeling(nn.Module):
 
         # Gather all of the SEP hidden states
         hidden_states = outputs['last_hidden_state'].reshape(-1, self.config.hidden_size)
-        locs = (input_ids == self.sep_token_id).view(-1)
+        locs = (input_ids == self.sep_token_id)
+        if self.is_section_info_extra:
+            # remove first SEP token for each batch in locs as it belongs to the section information
+            # this is done by changing the first True to False for each batch
+            for i, _ in enumerate(locs):
+                locs[i][torch.nonzero(locs[i]==True, as_tuple=False)[0]] = False
         #(n * seq_len x d) -> (n * sep_len x d)
+        locs = locs.view(-1)
         sequence_output = hidden_states[locs]
         assert sequence_output.shape[0] == sum(locs)
         assert sequence_output.shape[1] == self.config.hidden_size

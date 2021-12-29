@@ -64,6 +64,45 @@ FINE_GRAINED_LABELS = {
     "implementation details": 3 # Methods
 }
 
+section_mapper = {
+    "introduction": "introduction",
+    "abstract": "abstract",
+    "method": "methods",
+    "methods": "methods",
+    "results": "results",
+    "discussion": "discussion",
+    "discussions": "discussion",
+    "conclusion": "conclusion",
+    "conclusions": "conclusion",
+    "results and discussion": "results discussion",
+    "related work": "background",
+    "experimental results": "results",
+    "literature review": "background",
+    "experiments": "methods",
+    "background": "background",
+    "methodology": "methods",
+    "conclusions and future work": "conclusion futurework",
+    "related works": "background",
+    "limitations": "discussion",
+    "procedure": "methods",
+    "material and methods": "methods",
+    "discussion and conclusion": "discussion conclusion",
+    "implementation": "methods",
+    "evaluation": "results",
+    "performance evaluation": "results",
+    "experiments and results": "methods results",
+    "overview": "introduction",
+    "experimental design": "methods",
+    "discussion and conclusions": "discussion conclusion",
+    "results and discussions": "results discussion",
+    "motivation": "introduction",
+    "proposed method": "methods",
+    "analysis": "results",
+    "future work": "futurework",
+    "results and analysis": "results",
+    "implementation details": "methods"
+}
+
 def scatter(inputs, target_gpus, dim=0):
     r"""
     Slices tensors into approximately equal chunks and
@@ -260,12 +299,15 @@ def collate_batch_language_modeling(tokenizer: PreTrainedTokenizer, input_data: 
 
 class TransformerSingleSentenceDataset(Dataset):
 
-    def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = text_to_batch_transformer, use_fine_labels: bool = False):
+    def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = text_to_batch_transformer, use_fine_labels: bool = False, use_section_info=None):
 
         self.dataset = read_citation_detection_jsonl_single_line(jsonl_file)
         self.tokenizer = tokenizer
         self.tokenizer_fn = tokenizer_fn
         self.use_fine_labels = use_fine_labels
+        self.use_section_info = use_section_info
+        if self.use_section_info or self.use_fine_labels:
+            print('INFO use_section_info and use_fine_labels is not supported for the TransformerSingleSentenceDataset: continue by assuming both were set to False')
 
     def __len__(self):
         return len(self.dataset)
@@ -283,12 +325,19 @@ class TransformerSingleSentenceDataset(Dataset):
 
 class TransformerMultiSentenceDataset(Dataset):
 
-    def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = text_to_sequence_batch_transformer, use_fine_labels: bool = False):
+    def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = text_to_sequence_batch_transformer, use_fine_labels: bool = False, use_section_info=None):
+        """
+        use_section_info: None -> no section information is used
+                          'first' -> [CLS] Section:S1 [SEP] ... [SEP] SN
+                          'always' -> [CLS] Section:S1 [SEP] ... [SEP] Section:SN
+                          'extra' -> [CLS] Section [SEP] S1 [SEP] ... [SEP] SN
+        """
 
         self.dataset = read_citation_detection_jsonl(jsonl_file)
         self.tokenizer = tokenizer
         self.tokenizer_fn = tokenizer_fn
         self.use_fine_labels = use_fine_labels
+        self.use_section_info = use_section_info
 
     def __len__(self):
         return len(self.dataset)
@@ -296,10 +345,20 @@ class TransformerMultiSentenceDataset(Dataset):
     def __getitem__(self, idx: int):
         row = self.dataset[idx]
         sents = [s['text'] for s in row['samples']]
+        section_title = row['section_title']
+        section = section_mapper.get(section_title, section_title)
+        if self.use_section_info == 'first':
+            sents[0] = section + ':' + sents[0]
+        elif self.use_section_info == 'always':
+            sents = [section + ':' + s for s in sents]
+        elif self.use_section_info == 'extra':
+            sents.insert(0, section)
         labels = [LABELS[s['label']] if s['label'] == 'non-check-worthy' or not self.use_fine_labels else FINE_GRAINED_LABELS[row['section_title'].lower()] for s in row['samples']]
         # Calls the text_to_batch function
         input_ids, masks = self.tokenizer_fn(sents, self.tokenizer)
         n_labels = sum(np.array(input_ids)[0] == self.tokenizer.sep_token_id)
+        if self.use_section_info == 'extra':
+            n_labels -= 1
         return input_ids, masks, labels[:n_labels]
 
     def getLabels(self, indices=None):
