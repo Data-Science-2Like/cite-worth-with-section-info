@@ -65,7 +65,7 @@ Filtering the data may take a while depending on your computing infrastructure. 
 ## Running experiments
 The code for the experiments can be found under `experiments`. To run them, first create a directory `experiments/data` and place all of the CiteWorth data in this directory. Then, go to `experiments/experiment_scripts` and run any of the experiments given there.
 
-[Weights and Biases](https://wandb.ai/site) are used to log the experiments. If you do not have/do not wish to use wandb, run the following before executing any of the scripts:
+[Weights and Biases](https://wandb.ai/site) are used to log the experiments. If you do not have/do not wish to use wandb, run the following in the `experiments` directory before executing any of the scripts:
 ```
-$ wandb offline
+$ wandb off
 ```
