@@ -165,11 +165,11 @@ def read_citation_detection_jsonl_single_line(jsonl_file: AnyStr, domain_list: L
 
     # Get sentences and labels
     if domain_list is None:
-        dataset = [[s['text'], LABELS[s['label']]] for d in data for s in d['samples']]
+        dataset = [[s['text'], LABELS[s['label']], d['section_title']] for d in data for s in d['samples']]
     else:
-        dataset = [[s['text'], LABELS[s['label']]] for d in data for s in d['samples'] if d['mag_field_of_study'][0] in domain_list]
+        dataset = [[s['text'], LABELS[s['label']], d['section_title']] for d in data for s in d['samples'] if d['mag_field_of_study'][0] in domain_list]
 
-    return pd.DataFrame(dataset, columns=['text', 'label'])
+    return pd.DataFrame(dataset, columns=['text', 'label', 'section_title'])
 
 
 def read_citation_detection_jsonl(jsonl_file: AnyStr, domain_list: List[AnyStr] = None):
@@ -299,23 +299,37 @@ def collate_batch_language_modeling(tokenizer: PreTrainedTokenizer, input_data: 
 
 class TransformerSingleSentenceDataset(Dataset):
 
-    def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = text_to_batch_transformer, use_fine_labels: bool = False, use_section_info=None):
+    def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = None, use_fine_labels: bool = False, use_section_info=None):
+        """
+            use_section_info: None -> no section information is used
+                              'first' or 'always' -> [CLS] Section:S1 [SEP] ... [SEP] SN [SEP]
+                              'extra' -> [CLS] Section [SEP] S1 [SEP] ... [SEP] SN [SEP]
+            """
 
         self.dataset = read_citation_detection_jsonl_single_line(jsonl_file)
         self.tokenizer = tokenizer
+        if tokenizer_fn is None:
+            tokenizer_fn = text_to_sequence_batch_transformer if use_section_info == 'extra' else text_to_batch_transformer
         self.tokenizer_fn = tokenizer_fn
         self.use_fine_labels = use_fine_labels
         self.use_section_info = use_section_info
-        if self.use_section_info or self.use_fine_labels:
-            print('INFO use_section_info and use_fine_labels is not supported for the TransformerSingleSentenceDataset: continue by assuming both were set to False')
+        if self.use_fine_labels:
+            print('INFO use_fine_labels is not supported for the TransformerSingleSentenceDataset: continue by assuming it were set to False')
 
     def __len__(self):
         return len(self.dataset)
 
     def __getitem__(self, idx: int):
         row = self.dataset.iloc[idx].values
+        sents = [row[0]]
+        section_title = row[2]
+        section = section_mapper.get(section_title, section_title)
+        if self.use_section_info == 'first' or self.use_section_info == 'always':
+            sents[0] = section + ':' + sents[0]
+        elif self.use_section_info == 'extra':
+            sents.insert(0, section)
         # Calls the text_to_batch function
-        input_ids, masks = self.tokenizer_fn([row[0]], self.tokenizer)
+        input_ids, masks = self.tokenizer_fn(sents, self.tokenizer)
         label = row[1]
         return input_ids, masks, label
 
@@ -328,9 +342,9 @@ class TransformerMultiSentenceDataset(Dataset):
     def __init__(self, jsonl_file: AnyStr, tokenizer, tokenizer_fn: Callable = text_to_sequence_batch_transformer, use_fine_labels: bool = False, use_section_info=None):
         """
         use_section_info: None -> no section information is used
-                          'first' -> [CLS] Section:S1 [SEP] ... [SEP] SN
-                          'always' -> [CLS] Section:S1 [SEP] ... [SEP] Section:SN
-                          'extra' -> [CLS] Section [SEP] S1 [SEP] ... [SEP] SN
+                          'first' -> [CLS] Section:S1 [SEP] ... [SEP] SN [SEP]
+                          'always' -> [CLS] Section:S1 [SEP] ... [SEP] Section:SN [SEP]
+                          'extra' -> [CLS] Section [SEP] S1 [SEP] ... [SEP] SN [SEP]
         """
 
         self.dataset = read_citation_detection_jsonl(jsonl_file)

@@ -134,7 +134,7 @@ if __name__ == '__main__':
             "balance_class_weight": args.balance_class_weight,
             "pu_learning": pu_learning,
             "fine_grained_labels": False,
-            "use_section_info": False,
+            "use_section_info": args.use_section_info,
             "ensemble_edu": ensemble_edu,
             "ensemble_sent": ensemble_sent
         }
@@ -169,7 +169,6 @@ if __name__ == '__main__':
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         DatareaderClass = TransformerMultiSentenceDataset
         config['fine_grained_labels'] = args.fine_grained_labels
-        config['use_section_info'] = args.use_section_info
         tokenizer_fn = text_to_sequence_batch_transformer
         model = AutoTransformerForSentenceSequenceModeling(
             model_name,
@@ -180,7 +179,7 @@ if __name__ == '__main__':
     else:
         model = model_name
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        tokenizer_fn = text_to_batch_transformer
+        tokenizer_fn = text_to_sequence_batch_transformer if args.use_section_info == 'extra' else text_to_batch_transformer
 
     valid_dset = DatareaderClass(valid_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels, use_section_info=args.use_section_info)
 
