@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser.add_argument("--train_data", help="Location of the training data", required=True, type=str)
     parser.add_argument("--validation_data", help="Location of the validation data", required=True, type=str)
     parser.add_argument("--test_data", help="Location of the test data", required=True, type=str)
-    parser.add_argument("--train_domain", help="The domain to train on", type=str, default=None)
+    parser.add_argument("--train_domain", help="The domains to train on", nargs='+', type=str, default=None)
     parser.add_argument("--test_domain", help="The domain to test on ", required=True, type=str)
     parser.add_argument("--run_name", help="A name for this run", required=True, type=str)
     parser.add_argument("--tag", help="A tag to give this run (for wandb)", required=True, type=str)
@@ -94,6 +94,9 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
+    if args.train_domain is None:
+        args.train_domain = ["Biology", "Medicine", "Engineering", "Chemistry", "Psychology", "Computer Science",
+                             "Materials Science", "Economics", "Mathematics", "Physics"]
 
     seed = args.seed
     lr = args.learning_rate
@@ -175,14 +178,7 @@ if __name__ == '__main__':
     #     class_weights = 'sample_based_weight'
     # else:
     #     train_dset = TransformerSingleSentenceDataset(train_data_loc, tokenizer, tokenizer_fn=tokenizer_fn)
-    if args.train_domain is None:
-        if DatareaderClass == CitationDetectionSingleDomainMultiSentenceDataset:
-            train_dset = TransformerMultiSentenceDataset(args.train_data, tokenizer, tokenizer_fn=tokenizer_fn)
-            valid_dset = TransformerMultiSentenceDataset(args.validation_data, tokenizer, tokenizer_fn=tokenizer_fn)
-        else:
-            train_dset = TransformerSingleSentenceDataset(args.train_data, tokenizer, tokenizer_fn=tokenizer_fn)
-            valid_dset = TransformerSingleSentenceDataset(args.validation_data, tokenizer, tokenizer_fn=tokenizer_fn)
-    elif args.train_domain == args.test_domain:
+    if args.test_domain in args.train_domain:
             train_dset = DatareaderClass([args.train_data], tokenizer, tokenizer_fn=tokenizer_fn, domain=args.train_domain)
             valid_dset = DatareaderClass([args.validation_data], tokenizer, tokenizer_fn=tokenizer_fn, domain=args.train_domain)
     else:
@@ -231,7 +227,7 @@ if __name__ == '__main__':
     )
 
     # Test on the final test data
-    if args.train_domain is None or args.train_domain == args.test_domain:
+    if args.test_domain in args.train_domain:
         test_dset = DatareaderClass([args.test_data], tokenizer, tokenizer_fn=tokenizer_fn, domain=args.test_domain)
     else:
         test_dset = DatareaderClass(
