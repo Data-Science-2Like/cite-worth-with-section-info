@@ -322,7 +322,7 @@ class TransformerSingleSentenceDataset(Dataset):
     def __getitem__(self, idx: int):
         row = self.dataset.iloc[idx].values
         sents = [row[0]]
-        section_title = row[2]
+        section_title = row[2].lower()
         section = section_mapper.get(section_title, section_title)
         if self.use_section_info == 'first' or self.use_section_info == 'always':
             sents[0] = section + ':' + sents[0]
@@ -359,7 +359,7 @@ class TransformerMultiSentenceDataset(Dataset):
     def __getitem__(self, idx: int):
         row = self.dataset[idx]
         sents = [s['text'] for s in row['samples']]
-        section_title = row['section_title']
+        section_title = row['section_title'].lower()
         section = section_mapper.get(section_title, section_title)
         if self.use_section_info == 'first':
             sents[0] = section + ':' + sents[0]
