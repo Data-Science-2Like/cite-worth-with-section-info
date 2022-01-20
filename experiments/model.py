@@ -1,3 +1,4 @@
+import sklearn.metrics
 import torch
 import numpy as np
 from torch import nn
@@ -9,6 +10,9 @@ from transformers import AutoModel
 from transformers import AutoModelForMaskedLM
 from transformers import AutoTokenizer
 import ipdb
+
+from experiments.datareader import section_mapper
+from experiments.metrics import acc_f1
 
 
 class CNN(torch.nn.Module):
@@ -420,3 +424,48 @@ class AutoTransformerForSentenceSequenceModelingMultiTask(nn.Module):
             outputs = (loss,) + outputs
 
         return {'loss': loss, 'logits': logits}
+
+
+class RandomBaseline:
+    """
+       Implements a baseline which guesses binary labels (0 or 1) based on training data statistics
+    """
+
+    def __init__(self, balance_class_weight=False, use_section_info=False):
+        self.balance_class_weight = balance_class_weight
+        self.use_section_info = use_section_info
+        self.one_threshold = 0.5
+        self.one_section_thresholds = {}
+
+    def train(self, train_dset):
+        if self.balance_class_weight:
+            labels = train_dset.getLabels()
+            self.one_threshold = sum(labels) / len(labels)
+        if self.use_section_info:
+            for _, data in train_dset.dataset.iterrows():
+                _, data_label, data_section = data
+                data_section = section_mapper.get(data_section.lower(), data_section)
+                threshold, count = self.one_section_thresholds.get(data_section, (0, 0))
+                threshold += data_label
+                count += 1
+                self.one_section_thresholds[data_section] = (threshold, count)
+            for key, val in self.one_section_thresholds.items():
+                self.one_section_thresholds[key] = val[0] / val[1]
+
+    def predict(self, dset):
+        dset_size = len(dset.dataset)
+        values = np.random.uniform(0, 1, dset_size)
+        thresholds = [self.one_threshold] * dset_size
+        if self.use_section_info:
+            for idx, data in dset.dataset.iterrows():
+                _, data_label, data_section = data
+                data_section = section_mapper.get(data_section.lower(), data_section)
+                thresholds[idx] = self.one_section_thresholds.get(data_section, self.one_threshold)
+        predictions = values < thresholds
+        return predictions.astype(int)
+
+    def evaluate(self, test_dset):
+        pred_true = test_dset.getLabels().astype(int)
+        pred = self.predict(test_dset)
+        acc, P, R, F1 = acc_f1(pred, pred_true)
+        return acc, P, R, F1
