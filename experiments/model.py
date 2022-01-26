@@ -440,7 +440,7 @@ class RandomBaseline:
     def train(self, train_dset):
         if self.balance_class_weight:
             labels = train_dset.getLabels()
-            self.one_threshold = sum(labels) / len(labels)
+            self.one_threshold = 1 - (sum(labels) / len(labels))
         if self.use_section_info:
             for _, data in train_dset.dataset.iterrows():
                 _, data_label, data_section = data
@@ -450,7 +450,7 @@ class RandomBaseline:
                 count += 1
                 self.one_section_thresholds[data_section] = (threshold, count)
             for key, val in self.one_section_thresholds.items():
-                self.one_section_thresholds[key] = val[0] / val[1]
+                self.one_section_thresholds[key] = 1 - (val[0] / val[1])
 
     def predict(self, dset):
         dset_size = len(dset.dataset)
@@ -461,7 +461,7 @@ class RandomBaseline:
                 _, data_label, data_section = data
                 data_section = section_mapper.get(data_section.lower(), data_section)
                 thresholds[idx] = self.one_section_thresholds.get(data_section, self.one_threshold)
-        predictions = values < thresholds
+        predictions = values >= thresholds
         return predictions.astype(int)
 
     def evaluate(self, test_dset):
