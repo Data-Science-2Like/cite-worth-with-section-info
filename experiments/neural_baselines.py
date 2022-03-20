@@ -93,6 +93,7 @@ if __name__ == '__main__':
     parser.add_argument("--pretrained_model", help='A model file to initialize weights', default=None)
     parser.add_argument("--freeze_weights", help="Whether or not to freeze the model's weights", action="store_true", default=False)
     parser.add_argument("--fine_grained_labels", help="Whether or not to use fine-grained check-worthiness labels", action="store_true", default=False)
+    parser.add_argument("--use_section_info", help="Whether and how to use the section information as an input for the prediction", choices=[None, 'first', 'always', 'extra'], default=None)
     parser.add_argument("--ensemble_edu",
                         help="Whether or not to predict at the sentence level or at EDU level and ensemble the results",
                         action="store_true",
@@ -132,7 +133,8 @@ if __name__ == '__main__':
             "use_scheduler": use_scheduler,
             "balance_class_weight": args.balance_class_weight,
             "pu_learning": pu_learning,
-            "fine_grained_labels": args.fine_grained_labels,
+            "fine_grained_labels": False,
+            "use_section_info": args.use_section_info,
             "ensemble_edu": ensemble_edu,
             "ensemble_sent": ensemble_sent
         }
@@ -166,18 +168,20 @@ if __name__ == '__main__':
     elif args.sequence_model:
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         DatareaderClass = TransformerMultiSentenceDataset
+        config['fine_grained_labels'] = args.fine_grained_labels
         tokenizer_fn = text_to_sequence_batch_transformer
         model = AutoTransformerForSentenceSequenceModeling(
             model_name,
             num_labels=num_labels,
-            sep_token_id=tokenizer.sep_token_id
+            sep_token_id=tokenizer.sep_token_id,
+            is_section_info_extra=args.use_section_info == 'extra'
         ).to(device)
     else:
         model = model_name
         tokenizer = AutoTokenizer.from_pretrained(model_name)
-        tokenizer_fn = text_to_batch_transformer
+        tokenizer_fn = text_to_sequence_batch_transformer if args.use_section_info == 'extra' else text_to_batch_transformer
 
-    valid_dset = DatareaderClass(valid_data_loc, tokenizer, tokenizer_fn=tokenizer_fn)
+    valid_dset = DatareaderClass(valid_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels, use_section_info=args.use_section_info)
 
     trainer = TransformerClassificationTrainer(
         model,
@@ -195,11 +199,13 @@ if __name__ == '__main__':
         base_trainer = TransformerClassificationTrainer(model, device, num_labels=num_labels)
         base_trainer.load(args.pu_learning_model)
         #Create the training dataset
+        if args.use_section_info or args.use_fine_labels:
+            print('INFO use_section_info and use_fine_labels is not supported for PU learning: continue by assuming both were set to False')
         base_train_dset = DatareaderClass(train_data_loc, tokenizer, tokenizer_fn=tokenizer_fn)
         train_dset = TransformerClassifierPUCDataset(base_train_dset, valid_dset, base_trainer.model, device, puc=(pu_learning == 'puc'))
         class_weights = 'sample_based_weight'
     elif not train_dset:
-        train_dset = DatareaderClass(train_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels)
+        train_dset = DatareaderClass(train_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels, use_section_info=args.use_section_info)
 
     if args.pretrained_model is not None:
         trainer.load(args.pretrained_model)
@@ -239,7 +245,7 @@ if __name__ == '__main__':
         use_scheduler=use_scheduler
     )
 
-    test_dset = DatareaderClass(test_data_loc, tokenizer, tokenizer_fn=tokenizer_fn)
+    test_dset = DatareaderClass(test_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels, use_section_info=args.use_section_info)
     (test_loss, acc, P, R, F1) = trainer.evaluate(test_dset)
     wandb.run.summary[f'test-loss'] = test_loss
     wandb.run.summary[f'test-acc'] = acc
