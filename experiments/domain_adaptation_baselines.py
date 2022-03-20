@@ -11,7 +11,8 @@ import ipdb
 from torch.utils.data import random_split
 
 from datareader import CitationDetectionSingleDomainDataset, TransformerMultiSentenceDataset, \
-    text_to_sequence_batch_transformer, CitationDetectionSingleDomainMultiSentenceDataset
+    text_to_sequence_batch_transformer, CitationDetectionSingleDomainMultiSentenceDataset, \
+    TransformerSingleSentenceDataset
 from datareader import TransformerClassifierPUCDataset
 from datareader import text_to_batch_transformer_bpemb
 from datareader import text_to_batch_transformer
@@ -68,7 +69,7 @@ if __name__ == '__main__':
     parser.add_argument("--train_data", help="Location of the training data", required=True, type=str)
     parser.add_argument("--validation_data", help="Location of the validation data", required=True, type=str)
     parser.add_argument("--test_data", help="Location of the test data", required=True, type=str)
-    parser.add_argument("--train_domain", help="The domain to train on", required=True, type=str)
+    parser.add_argument("--train_domain", help="The domains to train on", nargs='+', type=str, default=None)
     parser.add_argument("--test_domain", help="The domain to test on ", required=True, type=str)
     parser.add_argument("--run_name", help="A name for this run", required=True, type=str)
     parser.add_argument("--tag", help="A tag to give this run (for wandb)", required=True, type=str)
@@ -93,6 +94,9 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
+    if args.train_domain is None:
+        args.train_domain = ["Biology", "Medicine", "Engineering", "Chemistry", "Psychology", "Computer Science",
+                             "Materials Science", "Economics", "Mathematics", "Physics"]
 
     seed = args.seed
     lr = args.learning_rate
@@ -174,20 +178,16 @@ if __name__ == '__main__':
     #     class_weights = 'sample_based_weight'
     # else:
     #     train_dset = TransformerSingleSentenceDataset(train_data_loc, tokenizer, tokenizer_fn=tokenizer_fn)
-    base_dset = DatareaderClass(
-        [args.train_data, args.validation_data, args.test_data],
-        tokenizer,
-        tokenizer_fn=tokenizer_fn,
-        domain=args.train_domain
-    )
-    if args.train_domain == args.test_domain:
-        train_size = int(len(base_dset) * 0.8)
-        val_size = int((len(base_dset) - train_size) / 2)
-        test_size = len(base_dset) - (train_size + val_size)
-        base_dsets = random_split(base_dset, [train_size, val_size, test_size])
-        train_dset = base_dsets[0]
-        valid_dset = base_dsets[1]
+    if args.test_domain in args.train_domain:
+            train_dset = DatareaderClass([args.train_data], tokenizer, tokenizer_fn=tokenizer_fn, domain=args.train_domain)
+            valid_dset = DatareaderClass([args.validation_data], tokenizer, tokenizer_fn=tokenizer_fn, domain=args.train_domain)
     else:
+        base_dset = DatareaderClass(
+            [args.train_data, args.validation_data, args.test_data],
+            tokenizer,
+            tokenizer_fn=tokenizer_fn,
+            domain=args.train_domain
+        )
         train_size = int(len(base_dset) * 0.8)
         base_dsets = random_split(base_dset, [train_size, len(base_dset) - train_size])
         train_dset = base_dsets[0]
@@ -227,8 +227,8 @@ if __name__ == '__main__':
     )
 
     # Test on the final test data
-    if args.train_domain == args.test_domain:
-        test_dset = base_dsets[2]
+    if args.test_domain in args.train_domain:
+        test_dset = DatareaderClass([args.test_data], tokenizer, tokenizer_fn=tokenizer_fn, domain=args.test_domain)
     else:
         test_dset = DatareaderClass(
             [args.train_data, args.validation_data, args.test_data],

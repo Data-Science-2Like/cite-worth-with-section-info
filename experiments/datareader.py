@@ -1,4 +1,4 @@
-from typing import AnyStr, List, Tuple, Callable
+from typing import AnyStr, Union, List, Tuple, Callable
 from torch.utils.data import Dataset
 from functools import partial
 from rouge_score import rouge_scorer
@@ -315,10 +315,12 @@ class TransformerMultiSentenceDataset(Dataset):
 
 class CitationDetectionSingleDomainDataset(Dataset):
 
-    def __init__(self, jsonl_files: List[AnyStr], tokenizer, domain: AnyStr, tokenizer_fn: Callable = text_to_batch_transformer):
+    def __init__(self, jsonl_files: List[AnyStr], tokenizer, domain: Union[AnyStr, List[AnyStr]], tokenizer_fn: Callable = text_to_batch_transformer):
+        if type(domain) == str:
+            domain = [domain]
         datasets = []
         for f in jsonl_files:
-            datasets.append(read_citation_detection_jsonl_single_line(f, domain_list=[domain]))
+            datasets.append(read_citation_detection_jsonl_single_line(f, domain_list=domain))
 
         self.dataset = pd.concat(datasets)
         self.tokenizer = tokenizer
@@ -338,10 +340,12 @@ class CitationDetectionSingleDomainDataset(Dataset):
 
 class CitationDetectionSingleDomainMultiSentenceDataset(Dataset):
 
-    def __init__(self, jsonl_files: List[AnyStr], tokenizer, domain: AnyStr, tokenizer_fn: Callable = text_to_sequence_batch_transformer):
+    def __init__(self, jsonl_files: List[AnyStr], tokenizer, domain: Union[AnyStr, List[AnyStr]], tokenizer_fn: Callable = text_to_sequence_batch_transformer):
+        if type(domain) == str:
+            domain = [domain]
         dataset = []
         for f in jsonl_files:
-            dataset.extend(read_citation_detection_jsonl(f, domain_list=[domain]))
+            dataset.extend(read_citation_detection_jsonl(f, domain_list=domain))
 
         self.dataset = dataset
         self.tokenizer = tokenizer
