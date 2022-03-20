@@ -149,7 +149,7 @@ class ClassificationEvaluator:
                     else:
                         input_dict['labels'] = labels
                         outputs = model(**input_dict)
-                        (loss,logits) = (outputs['loss'],outputs['logits'])
+                        outputs = (outputs['loss'],outputs['logits'])
 
                     if self.ensemble_edu:
                         edu_sizes = input_dict['edu_sizes']
