@@ -69,7 +69,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--train_data", help="Location of the training data", required=True, type=str)
     parser.add_argument("--validation_data", help="Location of the validation data", required=True, type=str)
-    parser.add_argument("--test_data", help="Location of the test data", required=True, type=str)
+    parser.add_argument("--test_data", help="Location of the test data", required=True, type=str, nargs='+')
     parser.add_argument("--run_name", help="A name for this run", required=True, type=str)
     parser.add_argument("--tag", help="A tag to give this run (for wandb)", required=True, type=str)
     parser.add_argument("--model_name", help="The name of the model being tested. Can be a directory for a local model",
@@ -144,7 +144,7 @@ if __name__ == '__main__':
 
     train_data_loc = args.train_data
     valid_data_loc = args.validation_data
-    test_data_loc = args.test_data
+    test_data_locs = args.test_data
 
     # See if CUDA available
     device = torch.device("cpu")
@@ -245,10 +245,18 @@ if __name__ == '__main__':
         use_scheduler=use_scheduler
     )
 
-    test_dset = DatareaderClass(test_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels, use_section_info=args.use_section_info)
-    (test_loss, acc, P, R, F1) = trainer.evaluate(test_dset)
-    wandb.run.summary[f'test-loss'] = test_loss
-    wandb.run.summary[f'test-acc'] = acc
-    wandb.run.summary[f'test-P'] = P
-    wandb.run.summary[f'test-R'] = R
-    wandb.run.summary[f'test-F1'] = F1
+    for test_data_loc in test_data_locs:
+        test_dset = DatareaderClass(test_data_loc, tokenizer, tokenizer_fn=tokenizer_fn, use_fine_labels=args.fine_grained_labels, use_section_info=args.use_section_info)
+        (test_loss, acc, P, R, F1) = trainer.evaluate(test_dset)
+        wandb.run.summary[f'test-loss'] = test_loss
+        wandb.run.summary[f'test-acc'] = acc
+        wandb.run.summary[f'test-P'] = P
+        wandb.run.summary[f'test-R'] = R
+        wandb.run.summary[f'test-F1'] = F1
+        os.makedirs(args.model_dir, exist_ok=True)
+        with open(model_dir + '/' + (test_data_loc.split('/')[-1]).split('.')[0] + ".txt", 'w') as out:
+            out.write("test_loss = {}\n".format(str(test_loss)))
+            out.write("test_acc = {}\n".format(str(acc)))
+            out.write("test_P = {}\n".format(str(P)))
+            out.write("test_R = {}\n".format(str(R)))
+            out.write("test_F1 = {}\n".format(str(F1)))
