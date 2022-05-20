@@ -11,5 +11,6 @@ python random_baselines.py \
   --run_name "${run_name}" \
   --tag "${tag}" \
   --output_dir ${output_dir} \
+  --seed 1000 \
   --use_section_info
 

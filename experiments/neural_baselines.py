@@ -226,15 +226,15 @@ if __name__ == '__main__':
     wandb_path = Path(wandb.run.dir)
     model_dir = f"{args.model_dir}/{wandb_path.name}"
     # Create save directory for model
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+    if not os.path.exists(model_dir + "/seed" + str(seed)):
+        os.makedirs(model_dir + "/seed" + str(seed))
 
     # Train it
     trainer.train(
         train_dset,
         valid_dset,
         weight_decay=weight_decay,
-        model_file=f"{model_dir}/model.pth",
+        model_file=f"{model_dir}/seed{seed}/model.pth",
         class_weights=class_weights,
         metric_name='F1',
         logger=wandb,
@@ -254,7 +254,7 @@ if __name__ == '__main__':
         wandb.run.summary[f'test-R'] = R
         wandb.run.summary[f'test-F1'] = F1
         os.makedirs(args.model_dir, exist_ok=True)
-        with open(model_dir + '/' + (test_data_loc.split('/')[-1]).split('.')[0] + ".txt", 'w') as out:
+        with open(model_dir + '/' + (test_data_loc.split('/')[-1]).split('.')[0] + "_seed" + str(seed) + ".txt", 'w') as out:
             out.write("test_loss = {}\n".format(str(test_loss)))
             out.write("test_acc = {}\n".format(str(acc)))
             out.write("test_P = {}\n".format(str(P)))

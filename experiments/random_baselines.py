@@ -83,7 +83,7 @@ if __name__ == '__main__':
         wandb.run.summary[f'model one_threshold'] = model.one_threshold
         wandb.run.summary[f'model one_section_thresholds'] = model.one_section_thresholds
         os.makedirs(args.output_dir, exist_ok=True)
-        with open(args.output_dir + '/' + (test_data_loc.split('/')[-1]).split('.')[0] + ".txt", 'w') as out:
+        with open(args.output_dir + '/' + (test_data_loc.split('/')[-1]).split('.')[0] + "_seed" + str(seed) + ".txt", 'w') as out:
             out.write("test_acc = {}\n".format(str(acc)))
             out.write("test_P = {}\n".format(str(P)))
             out.write("test_R = {}\n".format(str(R)))

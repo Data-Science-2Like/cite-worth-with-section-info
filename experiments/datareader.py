@@ -330,7 +330,7 @@ class TransformerSingleSentenceDataset(Dataset):
         section_title = row[2].lower()
         section = section_mapper[section_title]
         if self.use_section_info == 'first' or self.use_section_info == 'always':
-            sents[0] = section + ':' + sents[0]
+            sents[0] = section + ' ' + sents[0]
         elif self.use_section_info == 'extra':
             sents.insert(0, section)
         # Calls the text_to_batch function
@@ -369,7 +369,7 @@ class TransformerMultiSentenceDataset(Dataset):
         if self.use_section_info == 'first':
             sents[0] = section + ':' + sents[0]
         elif self.use_section_info == 'always':
-            sents = [section + ':' + s for s in sents]
+            sents = [section + ' ' + s for s in sents]
         elif self.use_section_info == 'extra':
             sents.insert(0, section)
         labels = [LABELS[s['label']] if s['label'] == 'non-check-worthy' or not self.use_fine_labels else FINE_GRAINED_LABELS[row['section_title'].lower()] for s in row['samples']]
