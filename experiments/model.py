@@ -11,8 +11,8 @@ from transformers import AutoModelForMaskedLM
 from transformers import AutoTokenizer
 import ipdb
 
-from experiments.datareader import section_mapper
-from experiments.metrics import acc_f1
+from datareader import section_mapper
+from metrics import acc_f1
 
 
 class CNN(torch.nn.Module):
@@ -444,7 +444,7 @@ class RandomBaseline:
         if self.use_section_info:
             for _, data in train_dset.dataset.iterrows():
                 _, data_label, data_section = data
-                data_section = section_mapper.get(data_section.lower(), data_section)
+                data_section = section_mapper[data_section.lower()]
                 threshold, count = self.one_section_thresholds.get(data_section, (0, 0))
                 threshold += data_label
                 count += 1
@@ -459,7 +459,7 @@ class RandomBaseline:
         if self.use_section_info:
             for idx, data in dset.dataset.iterrows():
                 _, data_label, data_section = data
-                data_section = section_mapper.get(data_section.lower(), data_section)
+                data_section = section_mapper[data_section.lower()]
                 thresholds[idx] = self.one_section_thresholds.get(data_section, self.one_threshold)
         predictions = values >= thresholds
         return predictions.astype(int)

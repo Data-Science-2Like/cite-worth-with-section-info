@@ -7,8 +7,8 @@ tag="citeworth-with-section-info"
 model_dir=models/longformer-solo-section-extra
 python neural_baselines.py \
   --train_data data/train.jsonl \
-  --validation_data data/dev.jsonl \
-  --test_data data/test.jsonl \
+  --validation_data data/val.jsonl \
+  --test_data data/test_conform.jsonl data/test_non_conform.jsonl data/test.jsonl \
   --run_name "${run_name}" \
   --tag "${tag}" \
   --model_name allenai/longformer-base-4096 \

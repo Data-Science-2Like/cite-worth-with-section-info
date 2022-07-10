@@ -64,43 +64,48 @@ FINE_GRAINED_LABELS = {
     "implementation details": 3 # Methods
 }
 
+# this mapper only contains the keys that are in our dataset created from the S2ORC dataset
 section_mapper = {
     "introduction": "introduction",
-    "abstract": "abstract",
-    "method": "methods",
-    "methods": "methods",
-    "results": "results",
+    "overview": "introduction",
+    "motivation": "introduction",
+
+    "related work": "related work",
+    "related works": "related work",
+    "background": "related work",
+    "literature review": "related work",
+
+    "methodology": "method",
+    "method": "method",
+    "methods": "method",
+    "material and methods": "method",
+    "proposed method": "method",
+    "procedure": "method",
+    "implementation": "method",
+    "experimental design": "method",
+    "implementation details": "method",
+
+    "experiments": "experiment",
+    "experimental results": "experiment",
+    "results": "experiment",
+    "evaluation": "experiment",
+    "performance evaluation": "experiment",
+    "experiments and results": "experiment",
+    "analysis": "experiment",
+    "results and analysis": "experiment",
+
     "discussion": "discussion",
     "discussions": "discussion",
+    "limitations": "discussion",
+    "results and discussion": "discussion",
+    "results and discussions": "discussion",
+
+    "discussion and conclusion": "conclusion",
+    "discussion and conclusions": "conclusion",
+    "future work": "conclusion",
     "conclusion": "conclusion",
     "conclusions": "conclusion",
-    "results and discussion": "results discussion",
-    "related work": "background",
-    "experimental results": "results",
-    "literature review": "background",
-    "experiments": "methods",
-    "background": "background",
-    "methodology": "methods",
-    "conclusions and future work": "conclusion futurework",
-    "related works": "background",
-    "limitations": "discussion",
-    "procedure": "methods",
-    "material and methods": "methods",
-    "discussion and conclusion": "discussion conclusion",
-    "implementation": "methods",
-    "evaluation": "results",
-    "performance evaluation": "results",
-    "experiments and results": "methods results",
-    "overview": "introduction",
-    "experimental design": "methods",
-    "discussion and conclusions": "discussion conclusion",
-    "results and discussions": "results discussion",
-    "motivation": "introduction",
-    "proposed method": "methods",
-    "analysis": "results",
-    "future work": "futurework",
-    "results and analysis": "results",
-    "implementation details": "methods"
+    "conclusions and future work": "conclusion"
 }
 
 def scatter(inputs, target_gpus, dim=0):
@@ -323,9 +328,9 @@ class TransformerSingleSentenceDataset(Dataset):
         row = self.dataset.iloc[idx].values
         sents = [row[0]]
         section_title = row[2].lower()
-        section = section_mapper.get(section_title, section_title)
+        section = section_mapper[section_title]
         if self.use_section_info == 'first' or self.use_section_info == 'always':
-            sents[0] = section + ':' + sents[0]
+            sents[0] = section + ' ' + sents[0]
         elif self.use_section_info == 'extra':
             sents.insert(0, section)
         # Calls the text_to_batch function
@@ -360,11 +365,11 @@ class TransformerMultiSentenceDataset(Dataset):
         row = self.dataset[idx]
         sents = [s['text'] for s in row['samples']]
         section_title = row['section_title'].lower()
-        section = section_mapper.get(section_title, section_title)
+        section = section_mapper[section_title]
         if self.use_section_info == 'first':
             sents[0] = section + ':' + sents[0]
         elif self.use_section_info == 'always':
-            sents = [section + ':' + s for s in sents]
+            sents = [section + ' ' + s for s in sents]
         elif self.use_section_info == 'extra':
             sents.insert(0, section)
         labels = [LABELS[s['label']] if s['label'] == 'non-check-worthy' or not self.use_fine_labels else FINE_GRAINED_LABELS[row['section_title'].lower()] for s in row['samples']]
