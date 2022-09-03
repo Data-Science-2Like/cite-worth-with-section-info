@@ -4,7 +4,7 @@
 cd ..
 run_name="longformer-solo"
 tag="citeworth"
-model_dir=models/longformer_solo
+model_dir=models/longformer-solo
 python neural_baselines.py \
   --train_data data/train.jsonl \
   --validation_data data/val.jsonl \

@@ -1,5 +1,5 @@
 # CiteWorth including Section Information
-This implementation is based on:
+This implementation is based on
 ```
 @inproceedings{wright2021citeworth,
     title={{CiteWorth: Cite-Worthiness Detection for Improved Scientific Document Understanding}},
@@ -9,7 +9,12 @@ This implementation is based on:
     year = 2021
 }
 ```
-We experiment with additionally including the section information as an input to the cite/check-worthiness classification.
+by forking the original repository by Dustin Wright and Isabelle Augenstein: https://github.com/copenlu/cite-worth
+
+We experiment with additionally including the section information as an input to the cite-worthiness classification.
+
+The following README is written by Dustin Wright and Isabelle Augenstein with slight modifications to make clear that these parts are their and not our contribution.  
+Please, see the README written by us in the `experiments` directory for details on our contribution.
 
 ## Getting the data
 The [CiteWorth data](https://github.com/copenlu/cite-worth) is available for download via this link: [https://drive.google.com/drive/folders/1j4B1rQFjjqnRzKsf15ur2\_rCaBh5TJKD?usp=sharing](https://drive.google.com/drive/folders/1j4B1rQFjjqnRzKsf15ur2\_rCaBh5TJKD?usp=sharing).  

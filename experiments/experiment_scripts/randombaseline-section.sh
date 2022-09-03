@@ -12,5 +12,6 @@ python random_baselines.py \
   --tag "${tag}" \
   --output_dir ${output_dir} \
   --seed 1000 \
+  --balance_class_weight \
   --use_section_info
 
