@@ -1,2 +1,10 @@
-Data is licensed under the CC By-NC 2.0 (https://creativecommons.org/licenses/by-nc/2.0/) license.
+CiteWorth data is licensed under the CC By-NC 2.0 (https://creativecommons.org/licenses/by-nc/2.0/) license.
+Please, use the following citation:
+    @inproceedings{wright2021citeworth,
+        title={{CiteWorth: Cite-Worthiness Detection for Improved Scientific Document Understanding}},
+        author={Dustin Wright and Isabelle Augenstein},
+        booktitle = {Findings of ACL-IJCNLP},
+        publisher = {Association for Computational Linguistics},
+        year = 2021
+    }
 The original data come from the 20200705v1 release of the Semantic Scholar Open Research Corpus dataset (https://github.com/allenai/s2orc).

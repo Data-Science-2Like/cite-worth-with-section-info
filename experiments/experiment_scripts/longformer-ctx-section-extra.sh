@@ -1,10 +1,9 @@
 #!/bin/bash
 . activate scientific-citation-detection
-
 cd ..
-run_name="longformer-solo"
-tag="citeworth"
-model_dir=models/longformer-solo
+run_name="longformer-ctx-section-extra"
+tag="citeworth-with-section-info"
+model_dir=models/longformer-ctx-section-extra
 python neural_baselines.py \
   --train_data data/train.jsonl \
   --validation_data data/val.jsonl \
@@ -16,8 +15,10 @@ python neural_baselines.py \
   --balance_class_weight \
   --n_gpu 1 \
   --batch_size 4 \
-  --learning_rate 0.000001351 \
+  --learning_rate 0.00001112 \
   --warmup_steps 300 \
-  --weight_decay 0.1 \
+  --weight_decay 0.0 \
   --n_epochs 3 \
-  --seed 1000
+  --seed 1000 \
+  --sequence_model \
+  --use_section_info extra

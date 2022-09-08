@@ -2,9 +2,9 @@
 . activate scientific-citation-detection
 
 cd ..
-run_name="longformer-solo"
-tag="citeworth"
-model_dir=models/longformer-solo
+run_name="longformer-solo-section-extra"
+tag="citeworth-with-section-info"
+model_dir=models/longformer-solo-section-extra
 python neural_baselines.py \
   --train_data data/train.jsonl \
   --validation_data data/val.jsonl \
@@ -20,4 +20,5 @@ python neural_baselines.py \
   --warmup_steps 300 \
   --weight_decay 0.1 \
   --n_epochs 3 \
-  --seed 1000
+  --seed 1000 \
+  --use_section_info extra

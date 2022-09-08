@@ -1,3 +1,4 @@
+import sklearn.metrics
 import torch
 import numpy as np
 from torch import nn
@@ -9,6 +10,9 @@ from transformers import AutoModel
 from transformers import AutoModelForMaskedLM
 from transformers import AutoTokenizer
 import ipdb
+
+from datareader import section_mapper
+from metrics import acc_f1
 
 
 class CNN(torch.nn.Module):
@@ -237,7 +241,7 @@ class AutoTransformerForSentenceSequenceModeling(nn.Module):
        Implements a transformer which performs sequence classification on a sequence of sentences
     """
 
-    def __init__(self, transformer_model: AnyStr, num_labels: int = 2, sep_token_id: int = 2):
+    def __init__(self, transformer_model: AnyStr, num_labels: int = 2, sep_token_id: int = 2, is_section_info_extra: bool = False):
         super(AutoTransformerForSentenceSequenceModeling, self).__init__()
 
         config = AutoConfig.from_pretrained(transformer_model)
@@ -254,6 +258,7 @@ class AutoTransformerForSentenceSequenceModeling(nn.Module):
 
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.sep_token_id = sep_token_id
+        self.is_section_info_extra = is_section_info_extra
 
     def forward(
             self,
@@ -270,8 +275,14 @@ class AutoTransformerForSentenceSequenceModeling(nn.Module):
 
         # Gather all of the SEP hidden states
         hidden_states = outputs['last_hidden_state'].reshape(-1, self.config.hidden_size)
-        locs = (input_ids == self.sep_token_id).view(-1)
+        locs = (input_ids == self.sep_token_id)
+        if self.is_section_info_extra:
+            # remove first SEP token for each batch in locs as it belongs to the section information
+            # this is done by changing the first True to False for each batch
+            for i, _ in enumerate(locs):
+                locs[i][torch.nonzero(locs[i]==True, as_tuple=False)[0]] = False
         #(n * seq_len x d) -> (n * sep_len x d)
+        locs = locs.view(-1)
         sequence_output = hidden_states[locs]
         assert sequence_output.shape[0] == sum(locs)
         assert sequence_output.shape[1] == self.config.hidden_size
@@ -413,3 +424,48 @@ class AutoTransformerForSentenceSequenceModelingMultiTask(nn.Module):
             outputs = (loss,) + outputs
 
         return {'loss': loss, 'logits': logits}
+
+
+class RandomBaseline:
+    """
+       Implements a baseline which guesses binary labels (0 or 1) based on training data statistics
+    """
+
+    def __init__(self, balance_class_weight=False, use_section_info=False):
+        self.balance_class_weight = balance_class_weight
+        self.use_section_info = use_section_info
+        self.one_threshold = 0.5
+        self.one_section_thresholds = {}
+
+    def train(self, train_dset):
+        if self.balance_class_weight:
+            labels = train_dset.getLabels()
+            self.one_threshold = 1 - (sum(labels) / len(labels))
+        if self.use_section_info:
+            for _, data in train_dset.dataset.iterrows():
+                _, data_label, data_section = data
+                data_section = section_mapper[data_section.lower()]
+                threshold, count = self.one_section_thresholds.get(data_section, (0, 0))
+                threshold += data_label
+                count += 1
+                self.one_section_thresholds[data_section] = (threshold, count)
+            for key, val in self.one_section_thresholds.items():
+                self.one_section_thresholds[key] = 1 - (val[0] / val[1])
+
+    def predict(self, dset):
+        dset_size = len(dset.dataset)
+        values = np.random.uniform(0, 1, dset_size)
+        thresholds = [self.one_threshold] * dset_size
+        if self.use_section_info:
+            for idx, data in dset.dataset.iterrows():
+                _, data_label, data_section = data
+                data_section = section_mapper[data_section.lower()]
+                thresholds[idx] = self.one_section_thresholds.get(data_section, self.one_threshold)
+        predictions = values >= thresholds
+        return predictions.astype(int)
+
+    def evaluate(self, test_dset):
+        pred_true = test_dset.getLabels().astype(int)
+        pred = self.predict(test_dset)
+        acc, P, R, F1 = acc_f1(pred, pred_true)
+        return acc, P, R, F1

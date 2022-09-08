@@ -2,13 +2,13 @@
 . activate scientific-citation-detection
 
 cd ..
-run_name="longformer-ctx"
-tag="citeworth"
-model_dir=models/longformer-ctx
-python neural_baselines.py \
+run_name="longformer-ctx-train_CS-test_CS"
+tag="citeworth-with-section-info"
+model_dir=models/longformer-ctx-train_CS-test_CS
+python domain_adaptation_baselines.py \
   --train_data data/train.jsonl \
-  --validation_data data/val.jsonl \
-  --test_data data/test_conform.jsonl data/test_non_conform.jsonl data/test.jsonl \
+  --validation_data data/dev.jsonl \
+  --test_data data/test.jsonl \
   --run_name "${run_name}" \
   --tag "${tag}" \
   --model_name allenai/longformer-base-4096 \
@@ -21,5 +21,6 @@ python neural_baselines.py \
   --weight_decay 0.0 \
   --n_epochs 3 \
   --seed 1000 \
-  --sequence_model
-
+  --sequence_model \
+  --train_domain "Computer Science" \
+  --test_domain "Computer Science"
